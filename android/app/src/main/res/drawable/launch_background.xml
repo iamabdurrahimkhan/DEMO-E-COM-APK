@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain brand colour while Flutter starts; the logo splash is drawn in Dart. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><color android:color="#14213D" /></item>
+</layer-list>

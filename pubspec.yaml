@@ -1,0 +1,34 @@
+name: suto_fashion
+description: SUTO Fashion shopping app — Android shell for the online store.
+publish_to: 'none'
+
+# CI overrides this with --build-name / --build-number on every release,
+# so each new APK installs over the old one.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  webview_flutter: ^4.10.0
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/icon.png
+  adaptive_icon_background: "#14213D"
+  adaptive_icon_foreground: assets/icon_fg.png
+  min_sdk_android: 21
