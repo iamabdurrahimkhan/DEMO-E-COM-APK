@@ -1,1 +1,85 @@
+name: Build APK
+
+# Run it from the Actions tab ("Run workflow"), or push a tag like v1.2.0.
+# Either way a GitHub Release is published with suto-fashion.apk attached, and
+# this link always points at the newest one:
+#   https://github.com/<you>/<repo>/releases/latest/download/suto-fashion.apk
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v1.0.{0}', github.run_number) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Generates the rest of the android/ folder. Files already in the repo
+      # (manifest, splash colours) are kept as they are.
+      - name: Generate Android project files
+        run: flutter create --org com.ark --project-name suto_fashion --platforms android .
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: App icon
+        run: dart run flutter_launcher_icons
+
+      - name: Build APK
+        run: |
+          NAME="${VERSION#v}"
+          flutter build apk --release \
+            --target-platform android-arm,android-arm64 \
+            --build-name "$NAME" --build-number "${{ github.run_number }}"
+
+      - name: Sign APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          mkdir -p dist
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+            BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+            "$BT/apksigner" sign --ks release.jks --ks-pass env:KEYSTORE_PASSWORD \
+              --ks-key-alias "$KEY_ALIAS" --key-pass env:KEYSTORE_PASSWORD \
+              --out dist/suto-fashion.apk "$APK"
+            "$BT/apksigner" verify --print-certs dist/suto-fashion.apk | head -3
+            rm -f release.jks
+          else
+            echo "::warning::Signing secrets not set. The APK is debug-signed, so a newer build will not install over an older one."
+            cp "$APK" dist/suto-fashion.apk
+          fi
+          ls -lh dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: suto-fashion-apk
+          path: dist/suto-fashion.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: SUTO Fashion ${{ env.VERSION }}
+          files: dist/suto-fashion.apk
+          make_latest: 'true'
 
